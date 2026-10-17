@@ -1999,12 +1999,11 @@ def create_timing_info(chip: Chip, db: chipdb.Device):
         # hold for the DSP's input registers; the block RAM's data-pin
         # figures from the vendor's timing file (bram: clka_dia_set,
         # clka_dia_hold) are used until the DSP's own table is decoded.
-        if "bram" in groups:
-            setup = group_to_timingvalue(groups["bram"]["clka_dia_set"])
-            hold  = group_to_timingvalue(groups["bram"]["clka_dia_hold"])
-        else:
-            setup = TimingValue(30)
-            hold  = TimingValue(249)
+        # EXPERIMENT (not for upstream): a 2.0 ns setup on the operands, to see
+        # whether a placer made to keep the operand registers beside the DSP
+        # gives a bitstream that plays on the board (noaidi-fpga-synth #230).
+        setup = TimingValue(2000)
+        hold  = TimingValue(249)
         add_dsp_registered(tmg.add_cell_variant(speed, "MULTALU36X18_REGISTERED"),
                            [("A", 18), ("B", 36), ("C", 54)], 54, setup, hold)
 
