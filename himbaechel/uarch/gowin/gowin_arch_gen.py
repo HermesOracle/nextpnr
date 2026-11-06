@@ -2017,11 +2017,15 @@ def create_timing_info(chip: Chip, db: chipdb.Device):
     for speed, groups in db.timing.items():
         for group, arc in groups.items():
             if group == "lut":
-                lut = tmg.add_cell_variant(speed, "LUT4")
-                lut.add_comb_arc("I0", "F", group_to_timingvalue(arc["a_f"]))
-                lut.add_comb_arc("I1", "F", group_to_timingvalue(arc["b_f"]))
-                lut.add_comb_arc("I2", "F", group_to_timingvalue(arc["c_f"]))
-                lut.add_comb_arc("I3", "F", group_to_timingvalue(arc["d_f"]))
+                # yosys emits LUT1..LUT4 as distinct cell types and the packer
+                # keeps them; a type without a variant here has no timing at
+                # all (every port TMG_IGNORE), so paths through it are never
+                # analysed. Give every width the same arcs on the inputs it has.
+                lut_arcs = ["a_f", "b_f", "c_f", "d_f"]
+                for width in range(1, 5):
+                    lut = tmg.add_cell_variant(speed, f"LUT{width}")
+                    for i in range(width):
+                        lut.add_comb_arc(f"I{i}", "F", group_to_timingvalue(arc[lut_arcs[i]]))
                 mux5 = tmg.add_cell_variant(speed, "MUX2_LUT5")
                 mux5.add_comb_arc("I0", "O", group_to_timingvalue(arc["m0_ofx0"]))
                 mux5.add_comb_arc("I1", "O", group_to_timingvalue(arc["m1_ofx1"]))
