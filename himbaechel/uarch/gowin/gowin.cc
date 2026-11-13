@@ -1364,6 +1364,23 @@ bool GowinImpl::dsp_valid(Loc l, IdString bel_type, bool explain_invalid) const
 
     // check for control nets "overflow"
     BelId dsp_bel = ctx->getBelByLocation(Loc(l.x, l.y, BelZ::DSP_Z));
+    // PROJECT GUARD, until the pack suite's apicula selects control lines above 0
+    // (YosysHQ/apicula #603): one RESET net per block, one CLK and one CE net per macro, so
+    // every DSP cell is packed on line 0, the only line that packer writes. Remove with the
+    // pin bump to a suite carrying that fix.
+    if (dsp_info.count(dsp_bel) && dsp_info.at(dsp_bel).reset.size() > 1) {
+        if (explain_invalid) {
+            log_nonfatal_error("Two RESET networks in one DSP block: the bitstream packer selects line 0 only.\n");
+        }
+        return false;
+    }
+    if (dsp_info.count(dsp_macro_bel) &&
+        (dsp_info.at(dsp_macro_bel).ce.size() > 1 || dsp_info.at(dsp_macro_bel).clk.size() > 1)) {
+        if (explain_invalid) {
+            log_nonfatal_error("Two CE or CLK networks in one DSP macro: the bitstream packer selects line 0 only.\n");
+        }
+        return false;
+    }
     if (dsp_info.count(dsp_bel)) {
         if (dsp_info.at(dsp_bel).reset.size() > 4) {
             if (explain_invalid) {
